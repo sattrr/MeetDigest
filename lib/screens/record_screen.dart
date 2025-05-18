@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:meetdigest/screens/summary_screen.dart';
+import 'home_screen.dart';
 
 class RecordScreen extends StatelessWidget {
   const RecordScreen({super.key});
@@ -10,7 +12,7 @@ class RecordScreen extends StatelessWidget {
       body: Column(
         children: [
           SizedBox(height: 20),
-          Center(child: Icon(Icons.mic, size: 80)),
+          Center(child: Icon(Icons.mic, size: 80, color: Colors.teal)),
           SizedBox(height: 10),
           Text("00:00:00:00", style: TextStyle(fontSize: 24)),
 
@@ -19,17 +21,26 @@ class RecordScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              ElevatedButton(onPressed: () {
-                Navigator.pop(context);
-              }, child: Text("Kembali")),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text("Kembali"),
+              ),
 
-              ElevatedButton(onPressed: () {
-                // TODO: Stop rekaman
-              }, child: Text("Stop")),
+              ElevatedButton(
+                onPressed: () {
+                  // TODO: Stop rekaman
+                },
+                child: Text("Stop"),
+              ),
 
-              ElevatedButton(onPressed: () {
-                // TODO: Pause rekaman
-              }, child: Text("Pause")),
+              ElevatedButton(
+                onPressed: () {
+                  // TODO: Pause rekaman
+                },
+                child: Text("Pause"),
+              ),
             ],
           ),
 
@@ -37,7 +48,10 @@ class RecordScreen extends StatelessWidget {
 
           ElevatedButton(
             onPressed: () {
-              Navigator.pushNamed(context, '/summary');
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => SummaryScreen()),
+              );
             },
             child: Text("Proses"),
           ),
