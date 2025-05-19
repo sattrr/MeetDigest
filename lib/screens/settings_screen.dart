@@ -11,7 +11,6 @@ class SettingsScreen extends StatelessWidget {
     'Tentang Kami'
   ];
 
-  // Daftar asset svg yang sesuai dengan menu
   final List<String> icons = [
     'assets/svgs/user.svg',
     'assets/svgs/bell.svg',
@@ -20,10 +19,14 @@ class SettingsScreen extends StatelessWidget {
     'assets/svgs/help.svg',
   ];
 
+  SettingsScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Pengaturan")),
+      appBar: AppBar(
+        title: Text("MeetDigest"),
+      ),
       body: ListView.builder(
         itemCount: settings.length,
         itemBuilder: (context, index) => ListTile(

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'main_page.dart';
+import 'package:meetdigest/themes/app_palette.dart';
 
 class SplashScreen extends StatefulWidget {
   @override
@@ -14,7 +15,6 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // Tampilkan splash 2 detik dulu baru ke onboarding
     Timer(Duration(seconds: 2), () {
       setState(() {
         _showOnboarding = true;
@@ -25,7 +25,6 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     if (!_showOnboarding) {
-      // Tampilkan splash logo saja, tanpa interaksi
       return Scaffold(
         backgroundColor: Colors.white,
         body: Center(
@@ -37,7 +36,6 @@ class _SplashScreenState extends State<SplashScreen> {
         ),
       );
     } else {
-      // Tampilkan onboarding setelah splash
       return OnboardingScreen();
     }
   }
@@ -98,7 +96,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,  // background putih
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
           PageView(
@@ -111,33 +109,44 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             },
             children: _pages,
           ),
-          // Tombol Lewati di pojok kanan atas
-          Positioned(
-            top: 40,
-            right: 16,
-            child: TextButton(
-              onPressed: _goToMainPage,
-              child: Text(
-                'Lewati',
-                style: TextStyle(color: Colors.teal),
-              ),
-            ),
-          ),
-          // Tombol Lanjut di bawah
           Positioned(
             bottom: 40,
             left: 16,
             right: 16,
-            child: ElevatedButton(
-              onPressed: _nextPage,
-              child: Text(_currentPage == _pages.length - 1 ? 'Mulai' : 'Lanjut'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.teal,
-                padding: EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(_pages.length, (index) {
+                    bool isActive = index == _currentPage;
+                    return AnimatedContainer(
+                      duration: Duration(milliseconds: 300),
+                      margin: EdgeInsets.symmetric(horizontal: 4),
+                      width: isActive ? 24 : 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: isActive
+                            ? AppPalette.colorPrimary
+                            : AppPalette.colorSecondary,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    );
+                  }),
                 ),
-              ),
+                SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _nextPage,
+                  child: Text(
+                      _currentPage == _pages.length - 1 ? 'Mulai' : 'Lanjut'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppPalette.colorPrimary,
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

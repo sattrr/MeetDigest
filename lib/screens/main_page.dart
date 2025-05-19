@@ -35,8 +35,8 @@ class _MainPageState extends State<MainPage> {
         shape: CircleBorder(),
         child: SvgPicture.asset(
           'assets/svgs/mic.svg',
-          width: 28,
-          height: 28,
+          width: 30,
+          height: 30,
           colorFilter: ColorFilter.mode(Colors.white, BlendMode.srcIn),
         ),
       ),
