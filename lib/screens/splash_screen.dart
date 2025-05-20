@@ -5,6 +5,8 @@ import 'main_page.dart';
 import 'package:meetdigest/themes/app_palette.dart';
 
 class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
@@ -42,12 +44,14 @@ class _SplashScreenState extends State<SplashScreen> {
 }
 
 class OnboardingScreen extends StatefulWidget {
+  const OnboardingScreen({super.key});
+
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  PageController _pageController = PageController();
+  final PageController _pageController = PageController();
   int _currentPage = 0;
 
   final List<Widget> _pages = [
@@ -136,8 +140,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: _nextPage,
-                  child: Text(
-                      _currentPage == _pages.length - 1 ? 'Mulai' : 'Lanjut'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppPalette.colorPrimary,
                     padding: EdgeInsets.symmetric(vertical: 16),
@@ -145,6 +147,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
+                  child: Text(
+                      _currentPage == _pages.length - 1 ? 'Mulai' : 'Lanjut'),
                 ),
               ],
             ),

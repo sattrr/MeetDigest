@@ -5,10 +5,10 @@ class SummaryScreen extends StatelessWidget {
   final String summary;
 
   const SummaryScreen({
-    Key? key,
+    super.key,
     this.title = "Judul Catatan",
     this.summary = "Ini adalah ringkasan teks hasil rekaman atau upload.",
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

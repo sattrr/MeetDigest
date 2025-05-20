@@ -6,6 +6,8 @@ import 'settings_screen.dart';
 import 'package:meetdigest/themes/app_palette.dart';
 
 class MainPage extends StatefulWidget {
+  const MainPage({super.key});
+
   @override
   _MainPageState createState() => _MainPageState();
 }
