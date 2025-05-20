@@ -19,6 +19,7 @@ dependencies:
   cross_file: ^0.3.3
   record: ^6.0.0
   shared_preferences: ^2.2.2
+  dotted_border: ^2.0.0
 
 dev_dependencies:
   flutter_test:
