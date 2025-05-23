@@ -18,7 +18,7 @@ dependencies:
   file_selector: ^1.0.3
   cross_file: ^0.3.3
   record: ^6.0.0
-  shared_preferences: ^2.2.2
+  shared_preferences: ^2.4.0
   dotted_border: ^2.0.0
 
 dev_dependencies:

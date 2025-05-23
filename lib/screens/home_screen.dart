@@ -1,10 +1,14 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'package:dotted_border/dotted_border.dart';
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:meetdigest/themes/app_palette.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:dotted_border/dotted_border.dart';
-import 'dart:io';
 import 'summary_screen.dart';
+import 'package:meetdigest/models/note_model.dart';
+import 'package:meetdigest/config.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,7 +18,13 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<File> uploadedFiles = [];
+  List<Note> notes = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotes();
+  }
 
   Future<void> _pickAudioOrVideo() async {
     const XTypeGroup typeGroup = XTypeGroup(
@@ -25,136 +35,121 @@ class _HomeScreenState extends State<HomeScreen> {
     final XFile? file = await openFile(acceptedTypeGroups: [typeGroup]);
 
     if (file != null) {
-      setState(() {
-        uploadedFiles.add(File(file.path));
-      });
-      await _saveUploadedFiles();
-      
-      _showUploadSuccessPopup();
+      final newFile = File(file.path);
+      _showLoading();
+
+      try {
+        final summary = await _sendToApi(newFile);
+        final note = Note(filePath: newFile.path, summary: summary);
+
+        setState(() {
+          notes.add(note);
+        });
+
+        await _saveNotes();
+        if (mounted) Navigator.pop(context);
+        _showUploadSuccessPopup();
+      } catch (e) {
+        if (mounted) Navigator.pop(context);
+        _showError('Gagal memproses file. Coba lagi nanti.\nError: $e');
+      }
     }
   }
 
-  void _showUploadSuccessPopup() {
-    showGeneralDialog(
+  Future<String> _sendToApi(File file) async {
+    final uri = Uri.parse(AppConfig.apiBaseUrl);
+    final request = http.MultipartRequest('POST', uri);
+    request.files.add(await http.MultipartFile.fromPath('file', file.path));
+
+    final response = await request.send();
+
+    if (response.statusCode == 200) {
+      final respStr = await response.stream.bytesToString();
+      final jsonResponse = jsonDecode(respStr);
+      final String summary = jsonResponse['text'];
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('last_summary', summary);
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SummaryScreen(summaryText: summary),
+        ),
+      );
+      return summary;
+    } else {
+      print('Failed: ${response.statusCode}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal memproses file')),
+      );
+      return Future.error('Failed with status code: ${response.statusCode}');
+    }
+  }
+
+  Future<void> _saveNotes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonList = notes.map((note) => json.encode(note.toJson())).toList();
+    await prefs.setStringList('notes', jsonList);
+  }
+
+  Future<void> _loadNotes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonList = prefs.getStringList('notes') ?? [];
+    setState(() {
+      notes = jsonList.map((s) => Note.fromJson(json.decode(s))).toList();
+    });
+  }
+
+  Future<void> _deleteNote(int index) async {
+    setState(() {
+      notes.removeAt(index);
+    });
+    await _saveNotes();
+  }
+
+  void _showLoading() {
+    showDialog(
       context: context,
-      barrierDismissible: true,
-      barrierLabel: '',
-      transitionDuration: Duration(milliseconds: 300),
-      pageBuilder: (_, __, ___) {
-        return Center(
-          child: Material(
-            color: Colors.transparent,
-            child: Container(
-              margin: EdgeInsets.symmetric(horizontal: 40),
-              padding: EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: AppPalette.colorPrimary.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.check,
-                      color: AppPalette.colorPrimary,
-                      size: 30,
-                    ),
-                  ),
-                  SizedBox(height: 12),
-                  Text(
-                    'Upload Berhasil',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 6),
-                  Text(
-                    'File berhasil diupload',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: EdgeInsets.symmetric(vertical: 10),
-                      ),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      child: Text(
-                        'Mengerti', 
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-      transitionBuilder: (_, anim, __, child) {
-        return ScaleTransition(
-          scale: anim,
-          child: child,
-        );
-      },
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(),
+      ),
     );
   }
 
-  Future<void> _loadUploadedFiles() async {
-    final prefs = await SharedPreferences.getInstance();
-    final paths = prefs.getStringList('uploaded_files') ?? [];
-    setState(() {
-      uploadedFiles =
-          paths.map((path) => File(path)).where((f) => f.existsSync()).toList();
-    });
+  void _showUploadSuccessPopup() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.check_circle, color: Colors.green, size: 48),
+            const SizedBox(height: 12),
+            const Text('Upload Berhasil', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            const Text('File berhasil diringkas dan disimpan.'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tutup'),
+          ),
+        ],
+      ),
+    );
   }
 
-  Future<void> _saveUploadedFiles() async {
-    final prefs = await SharedPreferences.getInstance();
-    final paths = uploadedFiles.map((f) => f.path).toList();
-    await prefs.setStringList('uploaded_files', paths);
-  }
-
-  Future<void> _deleteFile(int index) async {
-    setState(() {
-      uploadedFiles.removeAt(index);
-    });
-    await _saveUploadedFiles();
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUploadedFiles();
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 
   @override
@@ -164,7 +159,6 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 24),
-
           Center(
             child: GestureDetector(
               onTap: _pickAudioOrVideo,
@@ -181,84 +175,51 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Column(
+                  child: const Column(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
+                    children: [
                       Icon(Icons.upload_file, color: Colors.green, size: 40),
                       SizedBox(height: 8),
-                      Text(
-                        "Upload File",
-                        style: TextStyle(
-                          color: Colors.green,
-                          fontSize: 16,
-                        ),
-                      ),
+                      Text("Upload File", style: TextStyle(color: Colors.green, fontSize: 16)),
                     ],
                   ),
                 ),
               ),
             ),
           ),
-
           const SizedBox(height: 24),
-
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 24),
-            child: Text(
-              "Catatan Anda",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+            child: Text("Catatan Anda", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ),
-
           const SizedBox(height: 12),
-
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              itemCount: uploadedFiles.length,
+              itemCount: notes.length,
               itemBuilder: (context, index) {
-                final file = uploadedFiles[index];
+                final note = notes[index];
+                final filename = note.filePath.split(Platform.pathSeparator).last;
+
                 return Card(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   elevation: 2,
                   margin: const EdgeInsets.symmetric(vertical: 8),
                   child: ListTile(
                     leading: Icon(Icons.notes, size: 32, color: Colors.grey[700]),
                     title: Text("Catatan ${index + 1}"),
-                    subtitle: Text(file.path.split(Platform.pathSeparator).last),
+                    subtitle: Text(filename),
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const SummaryScreen(),
+                          builder: (_) => SummaryScreen(summaryText: note.summary),
                         ),
                       );
                     },
-                    trailing: PopupMenuButton<String>(
-                      onSelected: (value) async {
-                        if (value == 'edit') {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const SummaryScreen(),
-                            ),
-                          );
-                        } else if (value == 'delete') {
-                          await _deleteFile(index);
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'edit',
-                          child: Text('Ubah'),
-                        ),
-                        const PopupMenuItem(
-                          value: 'delete',
-                          child: Text('Hapus'),
-                        ),
-                      ],
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete),
+                      onPressed: () => _deleteNote(index),
                     ),
                   ),
                 );

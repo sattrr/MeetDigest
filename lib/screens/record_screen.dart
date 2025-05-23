@@ -1,10 +1,15 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:meetdigest/themes/app_palette.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:external_path/external_path.dart';
 import 'package:record/record.dart';
+import 'package:meetdigest/config.dart';
+import 'package:meetdigest/models/note_model.dart';
+import 'package:http/http.dart' as http;
 import 'home_screen.dart';
 import 'summary_screen.dart';
 import 'navbar.dart';
@@ -80,6 +85,38 @@ class _RecordScreenState extends State<RecordScreen> {
     });
 
     _showRecordingSavedPopup(_recordPath, savedDuration);
+  }
+
+  Future<String> _processSummaryFromRecording(String filePath) async {
+    final uri = Uri.parse(AppConfig.apiBaseUrl);
+    final request = http.MultipartRequest('POST', uri)
+      ..headers['Content-Type'] = 'multipart/form-data'
+      ..files.add(await http.MultipartFile.fromPath('file', filePath));
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final summary = data['summary'] ?? 'Tidak ada ringkasan';
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('last_summary', summary);
+
+      return summary;
+    } else {
+      throw Exception('Gagal mendapatkan ringkasan. Status: ${response.statusCode}');
+    }
+  }
+
+  Future<void> _saveNote(String filePath, String summary) async {
+    final prefs = await SharedPreferences.getInstance();
+    final existingNotes = prefs.getStringList('notes') ?? [];
+
+    final newNote = Note(filePath: filePath, summary: summary);
+    final updatedNotes = [...existingNotes, jsonEncode(newNote.toJson())];
+
+    await prefs.setStringList('notes', updatedNotes);
   }
 
   void _showRecordingSavedPopup(String filePath, Duration duration) {
@@ -302,21 +339,35 @@ class _RecordScreenState extends State<RecordScreen> {
             const SizedBox(height: 54),
 
             ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SummaryScreen()),
-                );
+              onPressed: () async {
+                if (_recordPath.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Tidak ada rekaman untuk diproses')),
+                  );
+                  return;
+                }
+
+                try {
+                  final summaryText = await _processSummaryFromRecording(_recordPath);
+                  await _saveNote(_recordPath, summaryText);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SummaryScreen(summaryText: summaryText),
+                    ),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Terjadi kesalahan: $e')),
+                  );
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.black,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 68, vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 68, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text("Proses",
-                  style: TextStyle(color: Colors.white, fontSize: 16)),
+              child: const Text("Proses", style: TextStyle(color: Colors.white, fontSize: 16)),
             ),
           ],
         ),
