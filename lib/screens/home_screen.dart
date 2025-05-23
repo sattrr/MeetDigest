@@ -61,29 +61,48 @@ class _HomeScreenState extends State<HomeScreen> {
     final request = http.MultipartRequest('POST', uri);
     request.files.add(await http.MultipartFile.fromPath('file', file.path));
 
-    final response = await request.send();
+    try {
+      final response = await request.send();
 
-    if (response.statusCode == 200) {
       final respStr = await response.stream.bytesToString();
-      final jsonResponse = jsonDecode(respStr);
-      final String summary = jsonResponse['text'];
+      print('Response body: $respStr');
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('last_summary', summary);
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(respStr);
+        final summary = jsonResponse['text'] ?? jsonResponse['summary'] ?? 'Tidak ada ringkasan';
 
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => SummaryScreen(summaryText: summary),
-        ),
-      );
-      return summary;
-    } else {
-      print('Failed: ${response.statusCode}');
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('last_summary', summary);
+        } catch (e) {
+          print("Gagal menyimpan summary: $e");
+        }
+
+        if (!context.mounted) return summary;
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SummaryScreen(summaryText: summary),
+          ),
+        );
+
+        return summary;
+      } else {
+        print('Gagal status: ${response.statusCode}');
+        if (!context.mounted) return 'Gagal';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal memproses file')),
+        );
+        return Future.error('Failed with status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Terjadi kesalahan: $e');
+      if (!context.mounted) return 'Error';
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal memproses file')),
+        SnackBar(content: Text('Terjadi kesalahan: $e')),
       );
-      return Future.error('Failed with status code: ${response.statusCode}');
+      return Future.error(e);
     }
   }
 
