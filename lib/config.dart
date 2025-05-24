@@ -1,3 +1,3 @@
 class AppConfig {
-  static const String apiBaseUrl = 'https://fc5e-36-82-1-108.ngrok-free.app/transcription/transcribe';
+  static const String apiBaseUrl = 'https://460e-125-166-13-16.ngrok-free.app/transcription/transcribe';
 }
