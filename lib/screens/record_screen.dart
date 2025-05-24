@@ -343,6 +343,10 @@ class _RecordScreenState extends State<RecordScreen> {
 
             ElevatedButton(
               onPressed: () async {
+                if (_isRecording) {
+                  await _stopRecording();
+                }
+
                 if (_recordPath.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Tidak ada rekaman untuk diproses')),
